@@ -11,6 +11,9 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+
+    api("net.minestom:minestom:2026.03.03-1.21.11")
+
 }
 
 kotlin {
