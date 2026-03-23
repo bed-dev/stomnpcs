@@ -1,5 +1,8 @@
 package codes.bed.minestom.npc.test
 
+import codes.bed.minestom.npc.StomNPCs
+import codes.bed.minestom.npc.api.NpcInteractionType
+import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
@@ -8,6 +11,8 @@ import net.minestom.server.entity.*
 import net.minestom.server.entity.metadata.avatar.PlayerMeta
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import net.minestom.server.entity.metadata.other.InteractionMeta
+import net.minestom.server.event.EventFilter
+import net.minestom.server.event.EventNode
 import net.minestom.server.event.entity.EntityAttackEvent
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerEntityInteractEvent
@@ -33,6 +38,9 @@ fun main() {
     instanceContainer.chunkSupplier = ChunkSupplier { instance, x, z -> LightingChunk(instance, x, z) }
 
     val globalEventHandler = MinecraftServer.getGlobalEventHandler()
+    val npcEventNode = EventNode.type("npcs", EventFilter.INSTANCE)
+    globalEventHandler.addChild(npcEventNode)
+    StomNPCs.initialize(npcEventNode)
 
     globalEventHandler.addListener(AsyncPlayerConfigurationEvent::class.java) { event ->
         event.spawningInstance = instanceContainer
@@ -52,6 +60,25 @@ fun main() {
 
     val lamp = MinestomLamp.builder().build()
     lamp.register(TestCommands())
+}
+
+fun spawnNpc(instance: Instance, position: Pos, name: String, skin: PlayerSkin? = null): Entity {
+    val npc = EntityNpc(
+        npcType = EntityType.PLAYER,
+        displayName = name,
+        skin = skin,
+    )
+
+    npc.onInteract { interaction ->
+        when (interaction.type) {
+            NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with $name"))
+            NpcInteractionType.LEFT_CLICK -> interaction.player.sendMessage(Component.text("You attacked $name"))
+        }
+    }
+
+    npc.spawn()
+    npc.setInstance(instance, position)
+    return npc
 }
 
 fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: String): Entity {
@@ -166,7 +193,7 @@ class TestCommands {
 
     @Command("npc")
     fun npc(actor: Player) {
-        spawnTestNpc(actor.instance, actor.position, getSkin("Notch")!!, "Notch")
+        spawnNpc(actor.instance, actor.position, "Notch", getSkin("Notch"))
     }
 
     @Command("gmc")

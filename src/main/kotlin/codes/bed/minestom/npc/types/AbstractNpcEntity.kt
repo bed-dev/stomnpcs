@@ -1,8 +1,8 @@
 package codes.bed.minestom.npc.types
 
 import codes.bed.minestom.npc.StomNPCs
-import codes.bed.minestom.npc.api.NpcInteraction
 import codes.bed.minestom.npc.api.Npc
+import codes.bed.minestom.npc.api.NpcInteraction
 import codes.bed.minestom.npc.listener.NpcInteractListener
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
@@ -26,7 +26,7 @@ abstract class AbstractNpcEntity(entityType: EntityType, uuid: UUID = UUID.rando
     }
 
     override fun remove() {
-        StomNPCs.managerOrNull()?.unregister(this)
+        StomNPCs.manager().unregister(this)
         super.remove()
     }
 

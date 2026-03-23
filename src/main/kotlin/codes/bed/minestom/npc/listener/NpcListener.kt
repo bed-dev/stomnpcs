@@ -32,6 +32,7 @@ object NpcListener {
     }
 
     private fun onPlayerInteract(event: PlayerEntityInteractEvent) {
+        if (event.hand != PlayerHand.MAIN) return
         val npc = manager?.byEntityId(event.target.uuid) ?: return
         (npc as? AbstractNpcEntity)?.emitInteraction(
             NpcInteraction(
