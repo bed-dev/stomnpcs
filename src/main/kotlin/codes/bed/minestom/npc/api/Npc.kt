@@ -1,6 +1,6 @@
-package codes.bed.minestom.npcs.api
+package codes.bed.minestom.npc.api
 
-import codes.bed.minestom.npcs.listener.NpcInteractListener
+import codes.bed.minestom.npc.listener.NpcInteractListener
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 

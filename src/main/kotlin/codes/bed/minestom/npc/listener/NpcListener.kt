@@ -1,4 +1,4 @@
-package codes.bed.minestom.npcs.listener
+package codes.bed.minestom.npc.listener
 
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.entity.EntityAttackEvent

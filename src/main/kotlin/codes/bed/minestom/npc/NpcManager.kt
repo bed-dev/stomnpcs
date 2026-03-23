@@ -1,6 +1,6 @@
-package codes.bed.minestom.npcs
+package codes.bed.minestom.npc
 
-import codes.bed.minestom.npcs.listener.NpcListener
+import codes.bed.minestom.npc.listener.NpcListener
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.trait.InstanceEvent
 

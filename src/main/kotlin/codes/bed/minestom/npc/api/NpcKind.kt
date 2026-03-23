@@ -1,4 +1,4 @@
-package codes.bed.minestom.npcs.api
+package codes.bed.minestom.npc.api
 
 
 enum class NpcKind {
