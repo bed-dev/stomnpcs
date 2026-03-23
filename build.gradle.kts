@@ -14,8 +14,9 @@ dependencies {
 
     api("net.minestom:minestom:2026.03.03-1.21.11")
 
-    testImplementation("org.tinylog:tinylog-api:2.7.0")
-    testImplementation("org.tinylog:tinylog-impl:2.7.0")
+    testImplementation("org.tinylog:tinylog-api-kotlin:2.8.0-M1")
+    testImplementation("org.tinylog:tinylog-impl:2.8.0-M1")
+    testImplementation("org.tinylog:slf4j-tinylog:2.8.0-M1")
 }
 
 kotlin {
