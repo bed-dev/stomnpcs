@@ -59,15 +59,15 @@ fun spawnTestNpc(instance: Instance, pos: Pos, skin: PlayerSkin) {
     }
 }
 
+fun getSkin(username: String): PlayerSkin? {
+    return PlayerSkin.fromUsername(username)
+}
+
 class TestCommands {
 
     @Command("npc")
     fun npc(actor: Player) {
-        spawnTestNpc(
-            instance = actor.instance!!,
-            pos = actor.position,
-            skin = actor.skin!!
-        )
+        spawnTestNpc(actor.instance!!, actor.position, getSkin("Notch")!!)
     }
 
     @Command("gmc")
