@@ -2,10 +2,12 @@ package codes.bed.minestom.npc.test
 
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
-import net.minestom.server.entity.Player
+import net.minestom.server.entity.*
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
+import net.minestom.server.instance.Instance
 import net.minestom.server.instance.LightingChunk
 import net.minestom.server.instance.block.Block
+import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
 import net.minestom.server.utils.chunk.ChunkSupplier
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.minestom.MinestomLamp
@@ -39,11 +41,33 @@ fun main() {
     lamp.register(TestCommands())
 }
 
+fun spawnTestNpc(instance: Instance, pos: Pos, skin: PlayerSkin) {
+    val npc = object : Entity(EntityType.PLAYER) {
+        override fun updateNewViewer(player: Player) {
+            val entry = PlayerInfoUpdatePacket.Entry(
+                uuid, "NPC",
+                listOf(PlayerInfoUpdatePacket.Property("textures", skin.textures(), skin.signature())),
+                false, 0, GameMode.SURVIVAL, null, null, 0, false
+            )
+            player.sendPacket(PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, entry))
+            super.updateNewViewer(player)
+        }
+    }
+
+    npc.setInstance(instance, pos).thenRun {
+        // player.sendPacket(PlayerInfoRemovePacket(npc.uuid))
+    }
+}
 
 class TestCommands {
 
     @Command("npc")
     fun npc(actor: Player) {
+        spawnTestNpc(
+            instance = actor.instance!!,
+            pos = actor.position,
+            skin = actor.skin!!
+        )
     }
 
     @Command("gmc")
