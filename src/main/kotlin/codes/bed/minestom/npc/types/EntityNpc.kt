@@ -1,6 +1,7 @@
 package codes.bed.minestom.npc.types
 
 import codes.bed.minestom.npc.api.NpcKind
+import net.kyori.adventure.text.Component
 import net.minestom.server.entity.EntityType
 import java.util.*
 
@@ -13,8 +14,7 @@ class EntityNpc @JvmOverloads constructor(
 
     init {
         setNoGravity(true)
+        setCustomName(Component.text(displayName))
+        isCustomNameVisible = true
     }
-
-
 }
-
