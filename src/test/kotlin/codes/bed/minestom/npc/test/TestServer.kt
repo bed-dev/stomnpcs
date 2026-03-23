@@ -116,7 +116,7 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
         meta.isRightSleeveEnabled = true
         meta.isLeftLegEnabled = true
         meta.isRightLegEnabled = true
-        meta.isHatEnabled = true
+        meta.isHatEnabled = false
     }
 
     nameTag = Entity(EntityType.TEXT_DISPLAY).apply {
@@ -130,7 +130,7 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
         setNoGravity(true)
         editEntityMeta(InteractionMeta::class.java) { meta ->
             meta.width = 0.75f
-            meta.height = 1.95f
+            meta.height = 1.0f
             meta.response = true
         }
     }
