@@ -1,9 +1,15 @@
 package codes.bed.minestom.npc.test
 
+import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
+import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.*
+import net.minestom.server.entity.metadata.display.AbstractDisplayMeta
+import net.minestom.server.entity.metadata.display.TextDisplayMeta
+import net.minestom.server.entity.metadata.other.InteractionMeta
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
+import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.LightingChunk
 import net.minestom.server.instance.block.Block
@@ -54,8 +60,30 @@ fun spawnTestNpc(instance: Instance, pos: Pos, skin: PlayerSkin) {
         }
     }
 
+    val nameTag = Entity(EntityType.TEXT_DISPLAY)
+    nameTag.editEntityMeta(TextDisplayMeta::class.java) { meta ->
+        meta.text = Component.text("TEXT DISPLAY")
+        meta.billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
+        meta.backgroundColor = 0
+        meta.translation = Vec(0.0, 2.3, 0.0)
+    }
+
+
+    val hitbox = Entity(EntityType.INTERACTION)
+    hitbox.editEntityMeta(InteractionMeta::class.java) { meta ->
+        meta.width = 0.6f
+        meta.height = 1.8f
+    }
+
+    instance.eventNode().addListener(PlayerEntityInteractEvent::class.java) { event ->
+        if (event.target == hitbox) {
+            event.player.sendMessage(Component.text("You interacted with the NPC!"))
+        }
+    }
+
     npc.setInstance(instance, pos).thenRun {
-        // player.sendPacket(PlayerInfoRemovePacket(npc.uuid))
+        nameTag.setInstance(instance, pos).thenRun { npc.addPassenger(nameTag) }
+        hitbox.setInstance(instance, pos).thenRun { npc.addPassenger(hitbox) }
     }
 }
 
