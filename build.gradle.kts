@@ -25,3 +25,13 @@ kotlin {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.register<JavaExec>("runTestServer") {
+    group = "application"
+    description = "Runs test server"
+    dependsOn(tasks.named("testClasses"))
+
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("codes.bed.minestom.npc.test.TestServerKt")
+    standardInput = System.`in`
+}
