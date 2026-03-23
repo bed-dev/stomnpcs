@@ -1,5 +1,7 @@
 package codes.bed.minestom.npc.types
 
+import codes.bed.minestom.npc.display.TextDisplayController
+
 import codes.bed.minestom.npc.api.NpcKind
 import net.kyori.adventure.text.Component
 import net.minestom.server.entity.EntityType
@@ -24,6 +26,8 @@ class EntityNpc @JvmOverloads constructor(
         setNoGravity(false)
         setCustomName(Component.text(displayName))
         isCustomNameVisible = true
+        val controller = TextDisplayController(Component.text(displayName))
+        setTextDisplayController(controller)
 
         if (npcType == EntityType.PLAYER) {
             editEntityMeta(PlayerMeta::class.java) { meta ->

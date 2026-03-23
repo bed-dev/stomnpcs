@@ -1,5 +1,7 @@
 package codes.bed.minestom.npc.test
 
+import codes.bed.minestom.npc.display.TextDisplayController
+
 import codes.bed.minestom.npc.StomNPCs
 import codes.bed.minestom.npc.api.NpcInteractionType
 import codes.bed.minestom.npc.types.EntityNpc
@@ -62,12 +64,14 @@ fun main() {
     lamp.register(TestCommands())
 }
 
-fun spawnNpc(instance: Instance, position: Pos, name: String, skin: PlayerSkin? = null): Entity {
+fun spawnNpc(instance: Instance, position: Pos, name: String, npcType: EntityType): Entity {
+    val textController = TextDisplayController(Component.text(name))
     val npc = EntityNpc(
-        npcType = EntityType.PLAYER,
+        npcType = npcType,
         displayName = name,
-        skin = skin,
     )
+        .setNameTagVisible(true)
+        .setTextDisplayController(textController)
 
     npc.onInteract { interaction ->
         when (interaction.type) {
@@ -77,8 +81,9 @@ fun spawnNpc(instance: Instance, position: Pos, name: String, skin: PlayerSkin? 
     }
 
     npc.spawn()
-    npc.setInstance(instance, position)
-    return npc
+    npc.entity.setInstance(instance, position)
+    textController.attachTo(npc.entity, instance)
+    return npc.entity
 }
 
 fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: String): Entity {
@@ -193,7 +198,31 @@ class TestCommands {
 
     @Command("npc")
     fun npc(actor: Player) {
-        spawnNpc(actor.instance, actor.position, "Notch", getSkin("Notch"))
+        // Option 1: Normal Minecraft nametag
+        spawnNpc(actor.instance, actor.position, "Notch (Nametag)", EntityType.PLAYER)
+    }
+
+    @Command("npc_text")
+    fun npcText(actor: Player) {
+        // Option 2: TextDisplayController (custom floating text)
+        val textController = TextDisplayController(Component.text("Custom TextDisplay for Notch"))
+        val npc = EntityNpc(
+            npcType = EntityType.PLAYER,
+            displayName = "Notch (TextDisplay)",
+        )
+            .setNameTagVisible(false) // Hide vanilla nametag
+            .setTextDisplayController(textController)
+
+        npc.onInteract { interaction ->
+            when (interaction.type) {
+                NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with Notch (TextDisplay)"))
+                NpcInteractionType.LEFT_CLICK -> interaction.player.sendMessage(Component.text("You attacked Notch (TextDisplay)"))
+            }
+        }
+
+        npc.spawn()
+        npc.entity.setInstance(actor.instance, actor.position)
+        textController.attachTo(npc.entity, actor.instance)
     }
 
     @Command("gmc")
