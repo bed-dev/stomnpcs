@@ -1,0 +1,73 @@
+name: Publish to Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ secrets.JAVA_VERSION || '17' }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper/
+          key: gradle-cache-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties', '**/*.gradle*') }}
+          restore-keys: |
+            gradle-cache-${{ runner.os }}-
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -e
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "No GPG_PRIVATE_KEY secret set, skipping import"
+            exit 1
+          fi
+          echo "$GPG_PRIVATE_KEY" > private.key
+          gpg --batch --import private.key
+
+      - name: Export secret keyring file
+        id: export-key
+        run: |
+          set -e
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
+          if [ -z "$KEY_ID" ]; then
+            echo "Unable to determine GPG key id"
+            exit 1
+          fi
+          echo "key=$KEY_ID" >> $GITHUB_OUTPUT
+          gpg --export-secret-keys --armor "$KEY_ID" > secret.asc
+
+      - name: Publish to Sonatype OSSRH
+        env:
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -e
+          if [ -z "$OSSRH_USERNAME" ] || [ -z "$OSSRH_PASSWORD" ]; then
+            echo "OSSRH credentials are not set. Please configure OSSRH_USERNAME and OSSRH_PASSWORD secrets."
+            exit 1
+          fi
+          # Use Gradle wrapper to publish. The project should use the signing and maven-publish plugins
+          # and read signing.secretKeyRingFile and signing.password from project properties.
+          ./gradlew --no-daemon publish -Psigning.secretKeyRingFile=$PWD/secret.asc -Psigning.password="$GPG_PASSPHRASE" -PossrhUsername="$OSSRH_USERNAME" -PossrhPassword="$OSSRH_PASSWORD"
+

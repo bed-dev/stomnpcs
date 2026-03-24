@@ -1,5 +1,7 @@
 package codes.bed.minestom.npc.builder
 
+import codes.bed.minestom.npc.api.NameDisplayMode
+import codes.bed.minestom.npc.api.NpcInteraction
 import codes.bed.minestom.npc.display.InteractionController
 import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.types.EntityNpc
@@ -22,7 +24,7 @@ class NpcBuilder {
 
     private var interactionOffset: Vec? = null
 
-    private var interactHandler: ((codes.bed.minestom.npc.api.NpcInteraction) -> Unit)? = null
+    private var interactHandler: ((NpcInteraction) -> Unit)? = null
     private var dialogueInit: (DialogueBuilder.() -> Unit)? = null
 
     fun textDisplay(text: Component, offset: Vec = Vec(0.0, 2.15, 0.0)) {
@@ -34,7 +36,7 @@ class NpcBuilder {
         this.interactionOffset = offset
     }
 
-    fun onInteract(handler: (codes.bed.minestom.npc.api.NpcInteraction) -> Unit) {
+    fun onInteract(handler: (NpcInteraction) -> Unit) {
         this.interactHandler = handler
     }
 
@@ -63,6 +65,13 @@ class NpcBuilder {
 
         interactHandler?.let { h ->
             npc.onInteract { h(it) }
+        }
+
+        // If a text display was configured, prefer using a global hologram for the name
+        npc.nameDisplayMode = if (textComponent != null) {
+            NameDisplayMode.GLOBAL_HOLOGRAM
+        } else {
+            NameDisplayMode.VANILLA
         }
 
         return npc

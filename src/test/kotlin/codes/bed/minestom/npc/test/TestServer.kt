@@ -1,9 +1,11 @@
 package codes.bed.minestom.npc.test
 
 import codes.bed.minestom.npc.StomNPCs
+import codes.bed.minestom.npc.api.NameDisplayMode
 import codes.bed.minestom.npc.api.NpcInteractionType
 import codes.bed.minestom.npc.builder.NpcBuilder
 import codes.bed.minestom.npc.builder.dialogue
+import codes.bed.minestom.npc.display.InteractionController
 import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
@@ -66,7 +68,7 @@ fun main() {
 
 fun spawnNpc(instance: Instance, position: Pos, name: String, npcType: EntityType): Entity {
     val textController = TextDisplayController(Component.text(name))
-    val interactController = codes.bed.minestom.npc.display.InteractionController()
+    val interactController = InteractionController()
     val npc = EntityNpc(
         npcType = npcType,
         displayName = name,
@@ -74,6 +76,8 @@ fun spawnNpc(instance: Instance, position: Pos, name: String, npcType: EntityTyp
         .setNameTagVisible(true)
         .setTextDisplayController(textController)
         .setInteractionController(interactController)
+    // This NPC uses a text display controller for its name; prefer the global hologram mode
+    npc.nameDisplayMode = NameDisplayMode.GLOBAL_HOLOGRAM
 
     npc.onInteract { interaction ->
         when (interaction.type) {
@@ -200,6 +204,7 @@ class TestCommands {
         )
             .setNameTagVisible(false)
             .setTextDisplayController(textController)
+        npc.nameDisplayMode = NameDisplayMode.GLOBAL_HOLOGRAM
         npc.onInteract { interaction ->
             when (interaction.type) {
                 NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with Notch (TextDisplay)"))
@@ -306,10 +311,11 @@ class TestCommands {
         val speakingNameHeight = 2.4
 
         val nameController = TextDisplayController(Component.text(npcName), Vec(0.0, idleNameHeight, 0.0))
-        val interactController = codes.bed.minestom.npc.display.InteractionController(Vec(0.0, 0.9, 0.0))
+        val interactController = InteractionController(Vec(0.0, 0.9, 0.0))
 
         npc.setTextDisplayController(nameController)
-            .setInteractionController(interactController)
+        npc.nameDisplayMode = NameDisplayMode.GLOBAL_HOLOGRAM
+        npc.setInteractionController(interactController)
 
         nameController.attachTo(npc.entity, instance)
         interactController.attachTo(npc.entity, instance)
@@ -413,6 +419,22 @@ class TestCommands {
             .attachOnInteract()
 
         actor.sendMessage(Component.text("Spawned simple dialogue NPC"))
+    }
+
+    @Command("npc follower")
+    fun npcFollower(actor: Player) {
+        val instance = actor.instance ?: return
+        val pos = actor.position
+
+        val npc = EntityNpc(
+            npcType = EntityType.PLAYER,
+            displayName = "Follower",
+        ).setNameTagVisible(true)
+
+        // If you want the NPC to move, manipulate `npc.entity` directly (e.g. teleport or set velocity).
+        npc.spawn()
+        npc.entity.setInstance(instance, pos)
+        actor.sendMessage(Component.text("Spawned follower NPC. Move it manually using the NPC's entity API if desired."))
     }
 
     @Command("gmc")

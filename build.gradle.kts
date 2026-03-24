@@ -1,9 +1,12 @@
 plugins {
     kotlin("jvm") version "2.3.10"
+    id("maven-publish")
+    id("signing")
 }
 
 group = "codes.bed.minestom"
-version = "1.0-SNAPSHOT"
+version = "0.1.0"
+description = "A small Minestom NPC library providing per-player dialogue holograms and configurable name displays"
 
 repositories {
     mavenCentral()
@@ -25,8 +28,81 @@ kotlin {
     jvmToolchain(25)
 }
 
+// Publishing configuration for Maven Central (OSSRH)
+val ossrhUsername: String? by project
+val ossrhPassword: String? by project
+val signingKey: String? by project
+val signingPassword: String? by project
+val signingKeyRingFile: String? by project
+
+java {
+    // Produce sources and javadoc jars for publishing
+    withSourcesJar()
+    withJavadocJar()
+}
+
+
+
+publishing {
+    publications {
+        create<org.gradle.api.publish.maven.MavenPublication>("mavenJava") {
+            from(components["java"])
+
+            pom {
+                name.set("stomnpcs")
+                description.set(project.description)
+                url.set("https://github.com/bed-dev/stomnpcs")
+                licenses {
+                    license {
+                        name.set("Apache-2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("bed-dev")
+                        name.set("bed-dev")
+                        url.set("https://github.com/bed-dev")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/bed-dev/stomnpcs.git")
+                    developerConnection.set("scm:git:ssh://github.com/bed-dev/stomnpcs.git")
+                    url.set("https://github.com/bed-dev/stomnpcs")
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = ossrhUsername
+                password = ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    // Support either in-memory PGP key (signingKey) or a keyring file path (signingKeyRingFile)
+    when {
+        !signingKey.isNullOrBlank() -> useInMemoryPgpKeys(signingKey, signingPassword)
+        !signingKeyRingFile.isNullOrBlank() -> useInMemoryPgpKeys(file(signingKeyRingFile!!).readText(), signingPassword)
+        else -> {
+            // No key configured; signing will fail if required by publishing. CI should provide keys.
+        }
+    }
+    // Only sign if the publication exists
+    sign(publishing.publications["mavenJava"])
+}
+
 tasks.test {
     useJUnitPlatform()
+    // Don't fail the build when no tests are discovered (some test setups run a custom test server)
+    failOnNoDiscoveredTests.set(false)
 }
 
 tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>("compileTestKotlin") {

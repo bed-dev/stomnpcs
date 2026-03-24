@@ -7,6 +7,8 @@ import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Vec
+import net.minestom.server.entity.metadata.display.AbstractDisplayMeta
+import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import java.util.concurrent.atomic.AtomicReference
 
 class DialogueBuilder(private val npc: EntityNpc) {
@@ -30,6 +32,7 @@ class DialogueBuilder(private val npc: EntityNpc) {
         npc.setDialogueListener(NpcInteractListener { interaction ->
             val player = interaction.player
             val playerId = player.uuid
+            val instance = player.instance ?: return@NpcInteractListener
             if (!activePlayers.add(playerId)) return@NpcInteractListener
 
             // Cancel any previously scheduled dialogue task for this player (no reflection)
@@ -37,32 +40,35 @@ class DialogueBuilder(private val npc: EntityNpc) {
 
             val mode = npc.nameDisplayMode
 
-            val dialogue = TextDisplayController(Component.empty(), displayOffset)
-            dialogue.attachTo(npc.entity, npc.entity.instance!!)
+            // Place the dialogue slightly below the NPC's name hologram so the name remains on top.
+            val baseOffset: Vec = npc.textDisplayController?.getOffset()?.let { off ->
+                // Position dialogue below the name hologram by subtracting vertical offset
+                Vec(off.x(), off.y() - 0.3, off.z())
+            } ?: displayOffset
+
+            val dialogue = TextDisplayController(Component.empty(), baseOffset)
+            dialogue.attachTo(npc.entity, instance)
+            // Ensure centered billboard rendering if supported
+            dialogue.getEntity()?.editEntityMeta(TextDisplayMeta::class.java) { meta ->
+                meta.billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
+            }
 
             val hadTextController = npc.textDisplayController != null
             val originalName: Component? = npc.textDisplayController?.getText()
             val originalOffset: Vec? = npc.textDisplayController?.getOffset()
-            val originalMetadataName = npc.getMetadataName()
-            val originalVisible = npc.isCustomNameVisible
-
+            val liftAmount = 0.5
+            // If this is the first active dialogue and the NPC uses a global hologram, lift the name hologram
+            if (mode == NameDisplayMode.GLOBAL_HOLOGRAM && hadTextController && originalOffset != null) {
+                if (activePlayers.size == 1) {
+                    // store original offset if not already stored
+                    npc.savedTextDisplayOffset.compareAndSet(null, originalOffset)
+                    val lifted = Vec(originalOffset.x(), originalOffset.y() + liftAmount, originalOffset.z())
+                    npc.textDisplayController?.updateOffset(lifted)
+                }
+            }
             if (mode == NameDisplayMode.PER_PLAYER_HOLOGRAM) {
                 npc.textDisplayController?.hideFrom(player)
-                npc.perPlayerDisplayController?.showFor(player, npc, npc.instance!!, Component.text(player.username))
-            } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
-                npc.textDisplayController?.updateText(Component.text(player.username))
-                originalOffset?.let { off ->
-                    npc.textDisplayController?.updateOffset(
-                        Vec(
-                            off.x(),
-                            off.y() + 0.3,
-                            off.z()
-                        )
-                    )
-                }
-            } else {
-                npc.setMetadataName(Component.text(player.username))
-                npc.isCustomNameVisible = true
+                npc.perPlayerDisplayController?.showFor(player, npc, instance, Component.text(player.username))
             }
 
             var index = 0
@@ -82,13 +88,16 @@ class DialogueBuilder(private val npc: EntityNpc) {
                         npc.textDisplayController?.showTo(player)
                     } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
                         if (hadTextController && originalName != null && originalOffset != null) {
-                            npc.textDisplayController?.updateText(originalName)
-                            npc.textDisplayController?.updateOffset(originalOffset)
+                            // Restore original global hologram text/offset only when no other dialogues are active
+                            activePlayers.remove(playerId)
+                            if (activePlayers.isEmpty()) {
+                                val saved = npc.savedTextDisplayOffset.getAndSet(null) ?: originalOffset
+                                npc.textDisplayController?.updateText(originalName)
+                                npc.textDisplayController?.updateOffset(saved)
+                            }
                         }
-                    } else {
-                        npc.setMetadataName(originalMetadataName)
-                        npc.isCustomNameVisible = originalVisible
                     }
+                    // ensure player removed if not already
                     activePlayers.remove(playerId)
                     // Cancel the scheduled task (no reflection)
                     npc.activeDialogueTasks.remove(playerId)?.get()?.cancel()
@@ -97,6 +106,12 @@ class DialogueBuilder(private val npc: EntityNpc) {
 
                 val current = messages[index]
                 val now = System.currentTimeMillis()
+
+                // Ensure the dialogue display follows any runtime changes to the NPC's name offset
+                val currentBaseOffset: Vec = npc.textDisplayController?.getOffset()?.let { off ->
+                    Vec(off.x(), off.y() - 0.3, off.z())
+                } ?: displayOffset
+                dialogue.updateOffset(currentBaseOffset)
 
                 if (typing) {
                     if (now >= nextTickAt) {
@@ -121,14 +136,19 @@ class DialogueBuilder(private val npc: EntityNpc) {
                                 npc.textDisplayController?.showTo(player)
                             } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
                                 if (hadTextController && originalName != null && originalOffset != null) {
-                                    npc.textDisplayController?.updateText(originalName)
-                                    npc.textDisplayController?.updateOffset(originalOffset)
+                                    // Restore original global hologram only when no other dialogues are active
+                                    activePlayers.remove(playerId)
+                                    if (activePlayers.isEmpty()) {
+                                        val saved = npc.savedTextDisplayOffset.getAndSet(null) ?: originalOffset
+                                        npc.textDisplayController?.updateText(originalName)
+                                        npc.textDisplayController?.updateOffset(saved)
+                                    }
+                                } else {
+                                    // ensure player removed if not already
+                                    activePlayers.remove(playerId)
                                 }
-                            } else {
-                                npc.setMetadataName(originalMetadataName)
-                                npc.isCustomNameVisible = originalVisible
                             }
-                            activePlayers.remove(playerId)
+                            // activePlayers removal handled above
                             // Ensure the task is cancelled and remove tracking (no reflection)
                             npc.activeDialogueTasks.remove(playerId)?.get()?.cancel()
                             return@buildTask
