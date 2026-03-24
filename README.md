@@ -47,6 +47,8 @@ npc.onInteract { player ->
 ```
 
 Java
+
+```java
 import codes.bed.minestom.npc.builder.NpcBuilder;
 import codes.bed.minestom.npc.StomNPCs;
 import codes.bed.minestom.npc.api.NameDisplayMode;
@@ -72,14 +74,10 @@ public class NpcExample {
         }));
     }
 }
+
 // Obtain the library helper and cast to the library EntityNpc type
 EntityNpc npc = (EntityNpc) StomNPCs.manager().byEntityId(spawned.getUuid());
 
-// On player interact, start a per-player dialogue
-npc.onInteract(player -> npc.dialogue(player, d -> {
-    d.line("Hello " + player.getUsername() + "!");
-    d.line("Welcome to the server.");
-}));
 ```
 
 License
