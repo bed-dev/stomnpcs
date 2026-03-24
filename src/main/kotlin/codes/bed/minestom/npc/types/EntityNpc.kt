@@ -1,9 +1,7 @@
 package codes.bed.minestom.npc.types
 
-import codes.bed.minestom.npc.display.TextDisplayController
-
 import codes.bed.minestom.npc.api.NpcKind
-import net.kyori.adventure.text.Component
+import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.EntityType
 import net.minestom.server.entity.GameMode
 import net.minestom.server.entity.Player
@@ -11,6 +9,7 @@ import net.minestom.server.entity.PlayerSkin
 import net.minestom.server.entity.metadata.avatar.PlayerMeta
 import net.minestom.server.network.packet.server.play.PlayerInfoRemovePacket
 import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
+import net.minestom.server.network.packet.server.play.TeamsPacket
 import java.util.*
 
 class EntityNpc @JvmOverloads constructor(
@@ -22,12 +21,12 @@ class EntityNpc @JvmOverloads constructor(
 ) : AbstractNpcEntity(npcType, uuid) {
     override val kind: NpcKind = NpcKind.ENTITY
 
+    private val team = MinecraftServer.getTeamManager().createBuilder("hidden_tag")
+        .nameTagVisibility(TeamsPacket.NameTagVisibility.NEVER)
+        .build();
+
     init {
         setNoGravity(false)
-        setCustomName(Component.text(displayName))
-        isCustomNameVisible = true
-        val controller = TextDisplayController(Component.text(displayName))
-        setTextDisplayController(controller)
 
         if (npcType == EntityType.PLAYER) {
             editEntityMeta(PlayerMeta::class.java) { meta ->
@@ -37,8 +36,23 @@ class EntityNpc @JvmOverloads constructor(
                 meta.isRightSleeveEnabled = true
                 meta.isLeftLegEnabled = true
                 meta.isRightLegEnabled = true
-                meta.isHatEnabled = false
+                meta.isHatEnabled = true
             }
+
+        }
+    }
+
+    override fun setNameTagVisible(visible: Boolean) = apply {
+        isCustomNameVisible = visible
+
+        if (npcType == EntityType.PLAYER) {
+            if (!visible) {
+                team.addMember(profileName)
+            } else {
+                if (team.members.contains(profileName))
+                    team.removeMember(profileName)
+            }
+
         }
     }
 
@@ -68,6 +82,7 @@ class EntityNpc @JvmOverloads constructor(
 
     override fun updateOldViewer(player: Player) {
         super.updateOldViewer(player)
+
         if (npcType == EntityType.PLAYER) {
             player.sendPacket(PlayerInfoRemovePacket(uuid))
         }
@@ -76,7 +91,6 @@ class EntityNpc @JvmOverloads constructor(
     companion object {
         private fun sanitizeProfileName(name: String): String {
             return name.filter { it.isLetterOrDigit() || it == '_' }
-                .ifBlank { "npc" }
                 .take(16)
         }
     }

@@ -1,9 +1,8 @@
 package codes.bed.minestom.npc.test
 
-import codes.bed.minestom.npc.display.TextDisplayController
-
 import codes.bed.minestom.npc.StomNPCs
 import codes.bed.minestom.npc.api.NpcInteractionType
+import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
@@ -199,7 +198,19 @@ class TestCommands {
     @Command("npc")
     fun npc(actor: Player) {
         // Option 1: Normal Minecraft nametag
-        spawnNpc(actor.instance, actor.position, "Notch (Nametag)", EntityType.PLAYER)
+        val npc = EntityNpc(
+            npcType = EntityType.PLAYER,
+            displayName = "Notch (Nametag)",
+        )
+            .setNameTagVisible(true)
+        npc.onInteract { interaction ->
+            when (interaction.type) {
+                NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with Notch (Nametag)"))
+                NpcInteractionType.LEFT_CLICK -> interaction.player.sendMessage(Component.text("You attacked Notch (Nametag)"))
+            }
+        }
+        npc.spawn()
+        npc.entity.setInstance(actor.instance, actor.position)
     }
 
     @Command("npc_text")
@@ -208,11 +219,10 @@ class TestCommands {
         val textController = TextDisplayController(Component.text("Custom TextDisplay for Notch"))
         val npc = EntityNpc(
             npcType = EntityType.PLAYER,
-            displayName = "Notch (TextDisplay)",
+            displayName = "   ",
         )
             .setNameTagVisible(false) // Hide vanilla nametag
             .setTextDisplayController(textController)
-
         npc.onInteract { interaction ->
             when (interaction.type) {
                 NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with Notch (TextDisplay)"))
@@ -223,6 +233,8 @@ class TestCommands {
         npc.spawn()
         npc.entity.setInstance(actor.instance, actor.position)
         textController.attachTo(npc.entity, actor.instance)
+        npc.entity.isCustomNameVisible = false
+        npc.entity.customName = Component.text("")
     }
 
     @Command("gmc")
