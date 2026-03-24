@@ -4,9 +4,9 @@ import codes.bed.minestom.npc.StomNPCs
 import codes.bed.minestom.npc.api.NameDisplayMode
 import codes.bed.minestom.npc.api.Npc
 import codes.bed.minestom.npc.api.NpcInteraction
+import codes.bed.minestom.npc.display.InteractionController
 import codes.bed.minestom.npc.display.PerPlayerTextDisplayController
 import codes.bed.minestom.npc.display.TextDisplayController
-import codes.bed.minestom.npc.display.InteractionController
 import codes.bed.minestom.npc.listener.NpcInteractListener
 import net.kyori.adventure.text.Component
 import net.minestom.server.entity.Entity
@@ -15,6 +15,7 @@ import net.minestom.server.entity.MetadataDef
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
+@Suppress("UnstableApiUsage")
 abstract class AbstractNpcEntity(entityType: EntityType, uuid: UUID = UUID.randomUUID()) : Entity(entityType, uuid),
     Npc {
 
@@ -33,7 +34,8 @@ abstract class AbstractNpcEntity(entityType: EntityType, uuid: UUID = UUID.rando
 
     // Hold references to scheduled dialogue tasks per-player so they can be cancelled safely
     // Store AtomicReference to net.minestom.server.timer.Task so tasks can be cancelled without reflection
-    val activeDialogueTasks: java.util.concurrent.ConcurrentHashMap<UUID, java.util.concurrent.atomic.AtomicReference<net.minestom.server.timer.Task?>> = java.util.concurrent.ConcurrentHashMap()
+    val activeDialogueTasks: java.util.concurrent.ConcurrentHashMap<UUID, java.util.concurrent.atomic.AtomicReference<net.minestom.server.timer.Task?>> =
+        java.util.concurrent.ConcurrentHashMap()
 
     override val entity: Entity get() = this
     override fun onInteract(listener: NpcInteractListener) = apply { interactionListeners += listener }
@@ -77,31 +79,24 @@ abstract class AbstractNpcEntity(entityType: EntityType, uuid: UUID = UUID.rando
     override fun spawn() {
         StomNPCs.manager().register(this)
         when (nameDisplayMode) {
-            NameDisplayMode.GLOBAL_HOLOGRAM -> textDisplayController?.let { it.attachTo(this, this.instance!!) }
+            NameDisplayMode.GLOBAL_HOLOGRAM -> textDisplayController?.attachTo(this, instance!!)
             NameDisplayMode.VANILLA -> {
                 // vanilla uses entity metadata; ensure display name metadata is set
                 if (isCustomNameVisible) metadata.set(MetadataDef.CUSTOM_NAME, Component.text(displayName))
             }
 
-            NameDisplayMode.PER_PLAYER_HOLOGRAM -> textDisplayController?.let { it.attachTo(this, this.instance!!) }
+            NameDisplayMode.PER_PLAYER_HOLOGRAM -> textDisplayController?.attachTo(this, instance!!)
         }
     }
 
     override fun getMetadataName(): Component? {
-        return metadata.get(MetadataDef.CUSTOM_NAME) as? Component
+        return metadata.get(MetadataDef.CUSTOM_NAME)
     }
 
     override fun setMetadataName(name: Component?): Npc = apply {
         metadata.set(MetadataDef.CUSTOM_NAME, name)
     }
 
-    fun showPerPlayerNameTo(player: net.minestom.server.entity.Player, text: Component) {
-        perPlayerDisplayController?.showFor(player, this, this.instance!!, text)
-    }
-
-    fun hidePerPlayerNameFor(player: net.minestom.server.entity.Player) {
-        perPlayerDisplayController?.hideFor(player)
-    }
 
     override fun remove() {
         textDisplayController?.detach()

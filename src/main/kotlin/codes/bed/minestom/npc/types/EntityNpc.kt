@@ -10,7 +10,8 @@ import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
 import net.minestom.server.network.packet.server.play.TeamsPacket
 import java.util.*
 
-class EntityNpc @JvmOverloads constructor(
+@Suppress("UnstableApiUsage")
+open class EntityNpc @JvmOverloads constructor(
     private val npcType: EntityType,
     override val displayName: String = npcType.name(),
     private val skin: PlayerSkin? = null,
@@ -21,7 +22,7 @@ class EntityNpc @JvmOverloads constructor(
 
     private val team = MinecraftServer.getTeamManager().createBuilder("hidden_tag")
         .nameTagVisibility(TeamsPacket.NameTagVisibility.NEVER)
-        .build();
+        .build()
 
     init {
         setNoGravity(false)

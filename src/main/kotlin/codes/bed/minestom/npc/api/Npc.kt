@@ -23,13 +23,6 @@ interface Npc {
 
     fun setNameTagVisible(visible: Boolean): Npc
 
-    fun setTextDisplay(text: Component?): Npc = apply {
-        textDisplayController?.updateText(text ?: Component.empty())
-    }
-
-    fun setTextDisplayOffset(x: Double, y: Double, z: Double): Npc = apply {
-        textDisplayController?.updateOffset(net.minestom.server.coordinate.Vec(x, y, z))
-    }
 
     fun setTextDisplayController(controller: TextDisplayController?): Npc = apply {
         textDisplayController = controller
@@ -39,13 +32,6 @@ interface Npc {
         interactionController = controller
     }
 
-    fun setPerPlayerDisplayController(controller: PerPlayerTextDisplayController?): Npc = apply {
-        perPlayerDisplayController = controller
-    }
-
-    fun setNameDisplayMode(mode: NameDisplayMode): Npc = apply {
-        nameDisplayMode = mode
-    }
 
     /**
      * Access the underlying custom name metadata (useful for saving/restoring state).

@@ -24,8 +24,6 @@ import net.minestom.server.event.player.PlayerPacketOutEvent
 import net.minestom.server.instance.Instance
 import net.minestom.server.instance.LightingChunk
 import net.minestom.server.instance.block.Block
-import net.minestom.server.network.packet.server.play.PlayerInfoRemovePacket
-import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
 import net.minestom.server.utils.chunk.ChunkSupplier
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.minestom.MinestomLamp
@@ -100,34 +98,14 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
     lateinit var nameTag: Entity
     lateinit var hitbox: Entity
 
-    val npc = object : Entity(EntityType.PLAYER, npcUuid) {
+    val npc = object : EntityNpc(
+        EntityType.PLAYER,
+        displayName = name,
+        skin = skin,
+        profileName = profileName,
+        uuid = npcUuid
+    ) {
         override fun movementTick() {}
-
-        override fun updateNewViewer(player: Player) {
-            val properties = listOf(
-                PlayerInfoUpdatePacket.Property("textures", skin.textures(), skin.signature())
-            )
-            val entry = PlayerInfoUpdatePacket.Entry(
-                uuid,
-                profileName,
-                properties,
-                false,
-                0,
-                GameMode.SURVIVAL,
-                null,
-                null,
-                0,
-                true
-            )
-
-            player.sendPacket(PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, entry))
-            super.updateNewViewer(player)
-        }
-
-        override fun updateOldViewer(player: Player) {
-            super.updateOldViewer(player)
-            player.sendPacket(PlayerInfoRemovePacket(uuid))
-        }
 
         override fun update(time: Long) {
             super.update(time)
@@ -143,8 +121,9 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
     }
 
     npc.setNoGravity(false)
-    npc.setCustomName(Component.text(name))
-    npc.isCustomNameVisible = true
+    // Use Npc API to set visible name and metadata
+    npc.setNameTagVisible(true)
+    npc.setMetadataName(Component.text(name))
 
     npc.editEntityMeta(PlayerMeta::class.java) { meta ->
         meta.isCapeEnabled = true
@@ -176,15 +155,13 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
     nameTag.setInstance(instance, position.add(nameTagOffset))
     hitbox.setInstance(instance, position.add(hitboxOffset))
 
-    val global = MinecraftServer.getGlobalEventHandler()
-
-    global.addListener(PlayerEntityInteractEvent::class.java) { event ->
+    MinecraftServer.getGlobalEventHandler().addListener(PlayerEntityInteractEvent::class.java) { event ->
         if (event.target.uuid == hitbox.uuid || event.target.uuid == npc.uuid) {
             event.player.sendMessage(Component.text("You interacted with $name"))
         }
     }
 
-    global.addListener(EntityAttackEvent::class.java) { event ->
+    MinecraftServer.getGlobalEventHandler().addListener(EntityAttackEvent::class.java) { event ->
         val player = event.entity as? Player ?: return@addListener
         if (event.target.uuid == hitbox.uuid || event.target.uuid == npc.uuid) {
             player.sendMessage(Component.text("You attacked $name"))
@@ -194,10 +171,6 @@ fun spawnTestNpc(instance: Instance, position: Pos, skin: PlayerSkin, name: Stri
     return npc
 }
 
-
-fun getSkin(username: String): PlayerSkin? {
-    return PlayerSkin.fromUsername(username)
-}
 
 class TestCommands {
 
@@ -237,8 +210,8 @@ class TestCommands {
         npc.spawn()
         npc.entity.setInstance(actor.instance, actor.position)
         textController.attachTo(npc.entity, actor.instance)
-        npc.entity.isCustomNameVisible = false
-        npc.entity.customName = Component.text("")
+        npc.setNameTagVisible(false)
+        npc.setMetadataName(null)
     }
 
     @Command("npc typewriter")
@@ -272,7 +245,7 @@ class TestCommands {
             var holdUntil = 0L
             var isTypingFinished = false
 
-            MinecraftServer.getSchedulerManager().buildTask { ->
+            MinecraftServer.getSchedulerManager().buildTask {
                 if (!textDisplay.isActive || !npc.entity.isActive) {
                     return@buildTask
                 }
