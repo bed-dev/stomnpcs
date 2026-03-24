@@ -29,10 +29,11 @@ kotlin {
 }
 
 // Publishing configuration for Maven Central (OSSRH)
-val ossrhUsername: String? by project
-val ossrhPassword: String? by project
-val signingKey: String? by project
-val signingPassword: String? by project
+// Safely read from Environment Variables (GitHub Actions) or fallback to properties (Local Builds)
+val ossrhUsername = System.getenv("OSSRH_USERNAME") ?: project.findProperty("ossrhUsername") as String?
+val ossrhPassword = System.getenv("OSSRH_PASSWORD") ?: project.findProperty("ossrhPassword") as String?
+val signingKey = System.getenv("GPG_PRIVATE_KEY") ?: project.findProperty("signingKey") as String?
+val signingPassword = System.getenv("GPG_PASSPHRASE") ?: project.findProperty("signingPassword") as String?
 val signingKeyRingFile: String? by project
 
 java {
@@ -40,8 +41,6 @@ java {
     withSourcesJar()
     withJavadocJar()
 }
-
-
 
 publishing {
     publications {
@@ -77,6 +76,8 @@ publishing {
     repositories {
         maven {
             name = "OSSRH"
+            // NOTE: If you just created your Sonatype account recently at central.sonatype.com,
+            // this legacy s01 URL will reject your upload.
             url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             credentials {
                 username = ossrhUsername
