@@ -47,32 +47,38 @@ npc.onInteract { player ->
 ```
 
 Java
-
-```java
 import codes.bed.minestom.npc.builder.NpcBuilder;
+import codes.bed.minestom.npc.StomNPCs;
 import codes.bed.minestom.npc.api.NameDisplayMode;
+import codes.bed.minestom.npc.types.EntityNpc;
+import net.minestom.server.coordinate.Pos;
+import net.minestom.server.entity.Entity;
+import net.minestom.server.instance.Instance;
 
-NpcBuilder builder = new NpcBuilder("Guide");
-builder.
+/** Minimal Java example wrapped in a class and method. */
+public class NpcExample {
+    public void createNpc(Instance instance) {
+        NpcBuilder builder = new NpcBuilder("Guide");
+        builder.position(instance, new Pos(0.0, 65.0, 0.0));
+        builder.nameDisplayMode(NameDisplayMode.PER_PLAYER_HOLOGRAM);
 
-position(instance, new Pos(0.0, 65.0,0.0));
-        builder.
+        Entity spawned = builder.spawn();
 
-nameDisplayMode(NameDisplayMode.PER_PLAYER_HOLOGRAM);
+        EntityNpc npc = (EntityNpc) StomNPCs.manager().byEntityId(spawned.getUuid());
 
-var npc = builder.spawn();
+        npc.onInteract(player -> npc.dialogue(player, d -> {
+            d.line("Hello " + player.getUsername() + "!");
+            d.line("Welcome to the server.");
+        }));
+    }
+}
+// Obtain the library helper and cast to the library EntityNpc type
+EntityNpc npc = (EntityNpc) StomNPCs.manager().byEntityId(spawned.getUuid());
 
-npc.
-
-onInteract(player ->npc.
-
-dialogue(player, d ->{
-        d.
-
-line("Hello "+player.getUsername() +"!");
-        d.
-
-line("Welcome to the server.");
+// On player interact, start a per-player dialogue
+npc.onInteract(player -> npc.dialogue(player, d -> {
+    d.line("Hello " + player.getUsername() + "!");
+    d.line("Welcome to the server.");
 }));
 ```
 
