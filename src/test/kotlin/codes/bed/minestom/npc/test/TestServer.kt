@@ -10,6 +10,7 @@ import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.*
 import net.minestom.server.entity.metadata.avatar.PlayerMeta
+import net.minestom.server.entity.metadata.display.AbstractDisplayMeta
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import net.minestom.server.entity.metadata.other.InteractionMeta
 import net.minestom.server.event.EventFilter
@@ -65,12 +66,14 @@ fun main() {
 
 fun spawnNpc(instance: Instance, position: Pos, name: String, npcType: EntityType): Entity {
     val textController = TextDisplayController(Component.text(name))
+    val interactController = codes.bed.minestom.npc.display.InteractionController()
     val npc = EntityNpc(
         npcType = npcType,
         displayName = name,
     )
         .setNameTagVisible(true)
         .setTextDisplayController(textController)
+        .setInteractionController(interactController)
 
     npc.onInteract { interaction ->
         when (interaction.type) {
@@ -82,6 +85,7 @@ fun spawnNpc(instance: Instance, position: Pos, name: String, npcType: EntityTyp
     npc.spawn()
     npc.entity.setInstance(instance, position)
     textController.attachTo(npc.entity, instance)
+    interactController.attachTo(npc.entity, instance)
     return npc.entity
 }
 
@@ -235,6 +239,183 @@ class TestCommands {
         textController.attachTo(npc.entity, actor.instance)
         npc.entity.isCustomNameVisible = false
         npc.entity.customName = Component.text("")
+    }
+
+    @Command("npc_typewriter")
+    fun npcTypewriter(actor: Player) {
+        val instance = actor.instance ?: return
+
+        val npc = EntityNpc(
+            npcType = EntityType.PLAYER,
+            displayName = "   ",
+        ).setNameTagVisible(false)
+
+        npc.spawn()
+        npc.entity.setInstance(instance, actor.position)
+        npc.onInteract { interaction ->
+            when (interaction.type) {
+                NpcInteractionType.RIGHT_CLICK -> interaction.player.sendMessage(Component.text("You interacted with the Typewriter NPC"))
+                NpcInteractionType.LEFT_CLICK -> interaction.player.sendMessage(Component.text("You attacked the Typewriter NPC"))
+            }
+
+            val textDisplay = Entity(EntityType.TEXT_DISPLAY).apply {
+                setNoGravity(true)
+                setInstance(instance, npc.position.add(0.0, 2.3, 0.0))
+            }
+
+            val message = "Hello Player, Welcome to the server."
+            val delayMillis = 40L
+            val holdDurationMillis = 4000L
+
+            var charIndex = 0
+            var nextTickAt = System.currentTimeMillis() + delayMillis
+            var holdUntil = 0L
+            var isTypingFinished = false
+
+            MinecraftServer.getSchedulerManager().buildTask { ->
+                if (!textDisplay.isActive || !npc.entity.isActive) {
+                    return@buildTask
+                }
+
+                val now = System.currentTimeMillis()
+
+                if (!isTypingFinished) {
+                    if (now >= nextTickAt) {
+                        while (charIndex < message.length && now >= nextTickAt) {
+                            charIndex++
+                            nextTickAt += delayMillis
+                        }
+
+                        if (charIndex > message.length) {
+                            charIndex = message.length
+                        }
+
+                        textDisplay.editEntityMeta(TextDisplayMeta::class.java) { meta ->
+                            meta.text = Component.text(message.substring(0, charIndex))
+                            meta.billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
+                        }
+
+                        if (charIndex >= message.length) {
+                            isTypingFinished = true
+                            holdUntil = now + holdDurationMillis
+                        }
+                    }
+                } else {
+                    if (now >= holdUntil) {
+                        textDisplay.remove()
+                        return@buildTask
+                    }
+                }
+            }.repeat(net.minestom.server.timer.TaskSchedule.millis(10)).schedule()
+        }
+
+
+
+        actor.sendMessage(Component.text("Spawned tagless typewriter NPC!"))
+    }
+
+
+    @Command("npc_dialogue")
+    fun npcDialogue(actor: Player) {
+        val instance = actor.instance ?: return
+        val pos = actor.position
+
+        val npcName = "Guide"
+        val npc = EntityNpc(
+            npcType = EntityType.PLAYER,
+            displayName = "   ",
+        ).setNameTagVisible(false)
+
+        npc.spawn()
+        npc.entity.setInstance(instance, pos)
+
+        val idleNameHeight = 2.1
+        val speakingNameHeight = 2.4
+
+        // Create controllers for the floating name and an interaction hitbox
+        val nameController = TextDisplayController(Component.text(npcName), Vec(0.0, idleNameHeight, 0.0))
+        val interactController = codes.bed.minestom.npc.display.InteractionController(Vec(0.0, 0.9, 0.0))
+
+        npc.setTextDisplayController(nameController)
+            .setInteractionController(interactController)
+
+        // Attach controllers to the NPC
+        nameController.attachTo(npc.entity, instance)
+        interactController.attachTo(npc.entity, instance)
+
+        npc.onInteract {
+            // typing dialogue shown via a temporary TextDisplayController
+            val dialogueController = TextDisplayController(Component.empty(), Vec(0.0, idleNameHeight, 0.0))
+            dialogueController.attachTo(npc.entity, instance)
+            // ensure centered billboard rendering if supported
+            dialogueController.getEntity()?.editEntityMeta(TextDisplayMeta::class.java) { meta ->
+                meta.billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
+            }
+
+            val messages = listOf(
+                "Hello Player",
+                "Welcome to the server.",
+                "I have a lot to tell you.",
+                "But let's start with the basics."
+            )
+
+            val delayMillis = 40L
+            val holdDurationMillis = 2500L
+
+            var messageIndex = 0
+            var charIndex = 0
+            var nextTickAt = System.currentTimeMillis() + delayMillis
+            var holdUntil = 0L
+            var isTyping = true
+
+            // lift the name slightly while speaking
+            nameController.updateOffset(Vec(0.0, speakingNameHeight, 0.0))
+
+            MinecraftServer.getSchedulerManager().buildTask {
+                val now = System.currentTimeMillis()
+                if (!npc.entity.isActive || dialogueController.getEntity() == null) {
+                    dialogueController.detach()
+                    return@buildTask
+                }
+
+                val currentMessage = messages[messageIndex]
+
+                if (isTyping) {
+                    if (now >= nextTickAt) {
+                        while (charIndex < currentMessage.length && now >= nextTickAt) {
+                            charIndex++
+                            nextTickAt += delayMillis
+                        }
+
+                        if (charIndex > currentMessage.length) charIndex = currentMessage.length
+
+                        dialogueController.updateText(Component.text(currentMessage.substring(0, charIndex)))
+
+                        if (charIndex >= currentMessage.length) {
+                            isTyping = false
+                            holdUntil = now + holdDurationMillis
+                        }
+                    }
+                } else {
+                    if (now >= holdUntil) {
+                        messageIndex++
+                        if (messageIndex >= messages.size) {
+                            // finished
+                            dialogueController.detach()
+                            nameController.updateOffset(Vec(0.0, idleNameHeight, 0.0))
+                            return@buildTask
+                        } else {
+                            charIndex = 0
+                            isTyping = true
+                            nextTickAt = now + delayMillis
+                            dialogueController.updateText(Component.text(""))
+                        }
+                    }
+                }
+            }.repeat(net.minestom.server.timer.TaskSchedule.millis(10)).schedule()
+
+            actor.sendMessage(Component.text("Started multi-line dialogue sequence!"))
+        }
     }
 
     @Command("gmc")

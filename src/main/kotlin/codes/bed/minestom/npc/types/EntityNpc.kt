@@ -1,11 +1,9 @@
 package codes.bed.minestom.npc.types
 
 import codes.bed.minestom.npc.api.NpcKind
+import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
-import net.minestom.server.entity.EntityType
-import net.minestom.server.entity.GameMode
-import net.minestom.server.entity.Player
-import net.minestom.server.entity.PlayerSkin
+import net.minestom.server.entity.*
 import net.minestom.server.entity.metadata.avatar.PlayerMeta
 import net.minestom.server.network.packet.server.play.PlayerInfoRemovePacket
 import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
@@ -43,14 +41,19 @@ class EntityNpc @JvmOverloads constructor(
     }
 
     override fun setNameTagVisible(visible: Boolean) = apply {
-        isCustomNameVisible = visible
+        if (!visible) {
+            metadata.set(MetadataDef.CUSTOM_NAME, null)
+            isCustomNameVisible = false
+        } else {
+            metadata.set(MetadataDef.CUSTOM_NAME, Component.text(displayName))
+            isCustomNameVisible = true
+        }
 
         if (npcType == EntityType.PLAYER) {
             if (!visible) {
-                team.addMember(profileName)
+                if (!team.members.contains(profileName)) team.addMember(profileName)
             } else {
-                if (team.members.contains(profileName))
-                    team.removeMember(profileName)
+                if (team.members.contains(profileName)) team.removeMember(profileName)
             }
 
         }

@@ -11,6 +11,7 @@ interface Npc {
     val entity: Entity
 
     var textDisplayController: codes.bed.minestom.npc.display.TextDisplayController?
+    var interactionController: codes.bed.minestom.npc.display.InteractionController?
 
     fun onInteract(listener: NpcInteractListener): Npc
 
@@ -27,6 +28,10 @@ interface Npc {
 
     fun setTextDisplayController(controller: codes.bed.minestom.npc.display.TextDisplayController?): Npc = apply {
         textDisplayController = controller
+    }
+
+    fun setInteractionController(controller: codes.bed.minestom.npc.display.InteractionController?): Npc = apply {
+        interactionController = controller
     }
 
     fun spawn()

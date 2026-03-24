@@ -19,6 +19,20 @@ class NpcManager(eventNode: EventNode<InstanceEvent>) {
         npcs[npc.entity.uuid] = npc
     }
 
+    /**
+     * Register an additional entity id as belonging to the given NPC. This is used for
+     * helper entities like text displays or interaction hitboxes so interactions on those
+     * entities are forwarded to the owning NPC.
+     */
+    fun registerEntity(entityId: UUID, npc: Npc): NpcManager = apply {
+        npcs[entityId] = npc
+    }
+
+    /** Unregister a previously registered additional entity id. */
+    fun unregisterEntity(entityId: UUID): NpcManager = apply {
+        npcs.remove(entityId)
+    }
+
     fun unregister(npc: Npc): NpcManager = apply {
         npcs.remove(npc.entity.uuid)
     }

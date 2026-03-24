@@ -14,11 +14,17 @@ import net.minestom.server.event.player.PlayerChatEvent
 import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.event.player.PlayerEntityInteractEvent
 import net.minestom.server.event.trait.InstanceEvent
+import java.util.concurrent.ConcurrentHashMap
+
+private const val DEDUPE_WINDOW_MS = 100L
 
 object NpcListener {
 
     @Volatile
     private var manager: NpcManager? = null
+
+    // Deduplication map to avoid firing multiple interactions for the same player->npc within a short time window (e.g. when both a hitbox and a text display are clicked).
+    private val lastInteraction = ConcurrentHashMap<String, Long>()
 
     // Registers event listeners
     fun register(node: EventNode<InstanceEvent>, npcManager: NpcManager) {
@@ -34,6 +40,12 @@ object NpcListener {
     private fun onPlayerInteract(event: PlayerEntityInteractEvent) {
         if (event.hand != PlayerHand.MAIN) return
         val npc = manager?.byEntityId(event.target.uuid) ?: return
+        val key = "${event.player.uuid}:${npc.entity.uuid}:${NpcInteractionType.RIGHT_CLICK}"
+        val now = System.currentTimeMillis()
+        val last = lastInteraction.getOrDefault(key, 0L)
+        if (now - last < DEDUPE_WINDOW_MS) return
+        lastInteraction[key] = now
+
         (npc as? AbstractNpcEntity)?.emitInteraction(
             NpcInteraction(
                 npc = npc,
@@ -47,6 +59,13 @@ object NpcListener {
     private fun onEntityAttack(event: EntityAttackEvent) {
         val player = event.entity as? Player ?: return
         val npc = manager?.byEntityId(event.target.uuid) ?: return
+        val key = "${player.uuid}:${npc.entity.uuid}:${NpcInteractionType.LEFT_CLICK}"
+        val now = System.currentTimeMillis()
+        val last = lastInteraction.getOrDefault(key, 0L)
+        if (now - last < DEDUPE_WINDOW_MS) return
+
+        lastInteraction[key] = now
+
         (npc as? AbstractNpcEntity)?.emitInteraction(
             NpcInteraction(
                 npc = npc,
