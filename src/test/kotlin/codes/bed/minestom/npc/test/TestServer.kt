@@ -2,6 +2,8 @@ package codes.bed.minestom.npc.test
 
 import codes.bed.minestom.npc.StomNPCs
 import codes.bed.minestom.npc.api.NpcInteractionType
+import codes.bed.minestom.npc.builder.NpcBuilder
+import codes.bed.minestom.npc.builder.dialogue
 import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
@@ -201,7 +203,6 @@ class TestCommands {
 
     @Command("npc")
     fun npc(actor: Player) {
-        // Option 1: Normal Minecraft nametag
         val npc = EntityNpc(
             npcType = EntityType.PLAYER,
             displayName = "Notch (Nametag)",
@@ -217,15 +218,14 @@ class TestCommands {
         npc.entity.setInstance(actor.instance, actor.position)
     }
 
-    @Command("npc_text")
+    @Command("npc text")
     fun npcText(actor: Player) {
-        // Option 2: TextDisplayController (custom floating text)
         val textController = TextDisplayController(Component.text("Custom TextDisplay for Notch"))
         val npc = EntityNpc(
             npcType = EntityType.PLAYER,
             displayName = "   ",
         )
-            .setNameTagVisible(false) // Hide vanilla nametag
+            .setNameTagVisible(false)
             .setTextDisplayController(textController)
         npc.onInteract { interaction ->
             when (interaction.type) {
@@ -241,7 +241,7 @@ class TestCommands {
         npc.entity.customName = Component.text("")
     }
 
-    @Command("npc_typewriter")
+    @Command("npc typewriter")
     fun npcTypewriter(actor: Player) {
         val instance = actor.instance ?: return
 
@@ -315,7 +315,7 @@ class TestCommands {
     }
 
 
-    @Command("npc_dialogue")
+    @Command("npc dialogue")
     fun npcDialogue(actor: Player) {
         val instance = actor.instance ?: return
         val pos = actor.position
@@ -332,19 +332,16 @@ class TestCommands {
         val idleNameHeight = 2.1
         val speakingNameHeight = 2.4
 
-        // Create controllers for the floating name and an interaction hitbox
         val nameController = TextDisplayController(Component.text(npcName), Vec(0.0, idleNameHeight, 0.0))
         val interactController = codes.bed.minestom.npc.display.InteractionController(Vec(0.0, 0.9, 0.0))
 
         npc.setTextDisplayController(nameController)
             .setInteractionController(interactController)
 
-        // Attach controllers to the NPC
         nameController.attachTo(npc.entity, instance)
         interactController.attachTo(npc.entity, instance)
 
         npc.onInteract {
-            // typing dialogue shown via a temporary TextDisplayController
             val dialogueController = TextDisplayController(Component.empty(), Vec(0.0, idleNameHeight, 0.0))
             dialogueController.attachTo(npc.entity, instance)
             // ensure centered billboard rendering if supported
@@ -368,7 +365,6 @@ class TestCommands {
             var holdUntil = 0L
             var isTyping = true
 
-            // lift the name slightly while speaking
             nameController.updateOffset(Vec(0.0, speakingNameHeight, 0.0))
 
             MinecraftServer.getSchedulerManager().buildTask {
@@ -400,7 +396,6 @@ class TestCommands {
                     if (now >= holdUntil) {
                         messageIndex++
                         if (messageIndex >= messages.size) {
-                            // finished
                             dialogueController.detach()
                             nameController.updateOffset(Vec(0.0, idleNameHeight, 0.0))
                             return@buildTask
@@ -416,6 +411,35 @@ class TestCommands {
 
             actor.sendMessage(Component.text("Started multi-line dialogue sequence!"))
         }
+    }
+
+    @Command("npc dsl")
+    fun npcDialogueSimple(actor: Player) {
+        val instance = actor.instance ?: return
+        val pos = actor.position
+
+        val npc = NpcBuilder().apply {
+            type = EntityType.PLAYER
+            name = "Guide"
+            nameTagVisible = false
+            textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
+            interaction(Vec(0.0, 0.9, 0.0))
+        }.spawn(instance, pos)
+
+        val entityNpc = StomNPCs.manager().byEntityId(npc.uuid) as EntityNpc
+
+        entityNpc.dialogue {
+            message("Hello Player")
+            message("Welcome to the server.")
+            message("I have a lot to tell you.")
+            message("But let's start with the basics.")
+            delay(40)
+            hold(2500)
+            offset(Vec(0.0, 2.1, 0.0))
+        }
+            .attachOnInteract()
+
+        actor.sendMessage(Component.text("Spawned simple dialogue NPC"))
     }
 
     @Command("gmc")

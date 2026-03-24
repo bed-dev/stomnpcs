@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Entity
 import net.minestom.server.entity.EntityType
+import net.minestom.server.entity.Player
 import net.minestom.server.entity.metadata.display.TextDisplayMeta
 import net.minestom.server.instance.Instance
 import java.util.*
@@ -31,13 +32,11 @@ class TextDisplayController(
             }
         }
 
-        // store the owner so we can forward interactions
         ownerUuid = npc.uuid
 
         val pos = npc.position.add(offset)
         entity?.setInstance(instance, pos)
 
-        // register the helper entity with the manager so NpcListener will map interactions
         ownerUuid?.let { ownerId ->
             val owner = StomNPCs.manager().byEntityId(ownerId)
             if (owner != null && entity != null) {
@@ -48,7 +47,6 @@ class TextDisplayController(
 
     fun detach() {
         entity?.let { e ->
-            // unregister helper mapping
             StomNPCs.manager().unregisterEntity(e.uuid)
             e.remove()
         }
@@ -65,7 +63,6 @@ class TextDisplayController(
 
     fun updateOffset(newOffset: Vec) {
         offset = newOffset
-        // move the display to the new offset relative to the owner
         ownerUuid?.let { ownerId ->
             val owner = StomNPCs.manager().byEntityId(ownerId)?.entity
             val e = entity
@@ -80,5 +77,15 @@ class TextDisplayController(
     }
 
     fun getEntity(): Entity? = entity
+    fun getText(): Component = text
+    fun getOffset(): Vec = offset
+
+    fun showTo(player: Player) {
+        entity?.addViewer(player)
+    }
+
+    fun hideFrom(player: Player) {
+        entity?.removeViewer(player)
+    }
 }
 

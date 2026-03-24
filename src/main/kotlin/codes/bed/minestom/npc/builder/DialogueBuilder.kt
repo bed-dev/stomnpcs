@@ -1,0 +1,157 @@
+package codes.bed.minestom.npc.builder
+
+import codes.bed.minestom.npc.api.NameDisplayMode
+import codes.bed.minestom.npc.display.TextDisplayController
+import codes.bed.minestom.npc.listener.NpcInteractListener
+import codes.bed.minestom.npc.types.EntityNpc
+import net.kyori.adventure.text.Component
+import net.minestom.server.MinecraftServer
+import net.minestom.server.coordinate.Vec
+import java.util.concurrent.atomic.AtomicReference
+
+class DialogueBuilder(private val npc: EntityNpc) {
+    private val messages = ArrayList<String>()
+    private var delayMillis: Long = 40L
+    private var holdDurationMillis: Long = 2500L
+    private var displayOffset: Vec = Vec(0.0, 2.15, 0.0)
+
+    fun message(line: String) = apply { messages += line }
+    fun delay(ms: Long) = apply { delayMillis = ms }
+    fun hold(ms: Long) = apply { holdDurationMillis = ms }
+    fun offset(vec: Vec) = apply { displayOffset = vec }
+
+    fun attachOnInteract() {
+        // Prevent attaching multiple onInteract listeners for the same NPC
+        if (npc.dialogueAttached) return
+        npc.dialogueAttached = true
+
+        val activePlayers = npc.activeDialoguePlayers
+
+        npc.setDialogueListener(NpcInteractListener { interaction ->
+            val player = interaction.player
+            val playerId = player.uuid
+            if (!activePlayers.add(playerId)) return@NpcInteractListener
+
+            // Cancel any previously scheduled dialogue task for this player (no reflection)
+            npc.activeDialogueTasks.remove(playerId)?.get()?.cancel()
+
+            val mode = npc.nameDisplayMode
+
+            val dialogue = TextDisplayController(Component.empty(), displayOffset)
+            dialogue.attachTo(npc.entity, npc.entity.instance!!)
+
+            val hadTextController = npc.textDisplayController != null
+            val originalName: Component? = npc.textDisplayController?.getText()
+            val originalOffset: Vec? = npc.textDisplayController?.getOffset()
+            val originalMetadataName = npc.getMetadataName()
+            val originalVisible = npc.isCustomNameVisible
+
+            if (mode == NameDisplayMode.PER_PLAYER_HOLOGRAM) {
+                npc.textDisplayController?.hideFrom(player)
+                npc.perPlayerDisplayController?.showFor(player, npc, npc.instance!!, Component.text(player.username))
+            } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
+                npc.textDisplayController?.updateText(Component.text(player.username))
+                originalOffset?.let { off ->
+                    npc.textDisplayController?.updateOffset(
+                        Vec(
+                            off.x(),
+                            off.y() + 0.3,
+                            off.z()
+                        )
+                    )
+                }
+            } else {
+                npc.setMetadataName(Component.text(player.username))
+                npc.isCustomNameVisible = true
+            }
+
+            var index = 0
+            var charIdx = 0
+            var nextTickAt = System.currentTimeMillis() + delayMillis
+            var holdUntil = 0L
+            var typing = true
+
+            val scheduledRef = AtomicReference<net.minestom.server.timer.Task?>(null)
+            npc.activeDialogueTasks[playerId] = scheduledRef
+
+            val task = MinecraftServer.getSchedulerManager().buildTask {
+                if (dialogue.getEntity() == null || !npc.entity.isActive) {
+                    dialogue.detach()
+                    if (mode == NameDisplayMode.PER_PLAYER_HOLOGRAM) {
+                        npc.perPlayerDisplayController?.hideFor(player)
+                        npc.textDisplayController?.showTo(player)
+                    } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
+                        if (hadTextController && originalName != null && originalOffset != null) {
+                            npc.textDisplayController?.updateText(originalName)
+                            npc.textDisplayController?.updateOffset(originalOffset)
+                        }
+                    } else {
+                        npc.setMetadataName(originalMetadataName)
+                        npc.isCustomNameVisible = originalVisible
+                    }
+                    activePlayers.remove(playerId)
+                    // Cancel the scheduled task (no reflection)
+                    npc.activeDialogueTasks.remove(playerId)?.get()?.cancel()
+                    return@buildTask
+                }
+
+                val current = messages[index]
+                val now = System.currentTimeMillis()
+
+                if (typing) {
+                    if (now >= nextTickAt) {
+                        while (charIdx < current.length && now >= nextTickAt) {
+                            charIdx++
+                            nextTickAt += delayMillis
+                        }
+                        if (charIdx > current.length) charIdx = current.length
+                        dialogue.updateText(Component.text(current.substring(0, charIdx)))
+                        if (charIdx >= current.length) {
+                            typing = false
+                            holdUntil = now + holdDurationMillis
+                        }
+                    }
+                } else {
+                    if (now >= holdUntil) {
+                        index++
+                        if (index >= messages.size) {
+                            dialogue.detach()
+                            if (mode == NameDisplayMode.PER_PLAYER_HOLOGRAM) {
+                                npc.perPlayerDisplayController?.hideFor(player)
+                                npc.textDisplayController?.showTo(player)
+                            } else if (mode == NameDisplayMode.GLOBAL_HOLOGRAM) {
+                                if (hadTextController && originalName != null && originalOffset != null) {
+                                    npc.textDisplayController?.updateText(originalName)
+                                    npc.textDisplayController?.updateOffset(originalOffset)
+                                }
+                            } else {
+                                npc.setMetadataName(originalMetadataName)
+                                npc.isCustomNameVisible = originalVisible
+                            }
+                            activePlayers.remove(playerId)
+                            // Ensure the task is cancelled and remove tracking (no reflection)
+                            npc.activeDialogueTasks.remove(playerId)?.get()?.cancel()
+                            return@buildTask
+                        }
+                        charIdx = 0
+                        typing = true
+                        nextTickAt = now + delayMillis
+                        dialogue.updateText(Component.text(""))
+                    }
+                }
+            }
+
+            val scheduled = task.repeat(net.minestom.server.timer.TaskSchedule.millis(10)).schedule()
+            scheduledRef.set(scheduled)
+        })
+    }
+}
+
+fun EntityNpc.dialogue(init: DialogueBuilder.() -> Unit): DialogueBuilder {
+    val b = DialogueBuilder(this)
+    b.init()
+    return b
+}
+
+
+
