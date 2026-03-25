@@ -32,12 +32,14 @@ import codes.bed.minestom.npc.builder.NpcBuilder
 import codes.bed.minestom.npc.api.NameDisplayMode
 
 // Build and spawn an NPC
-val npc = NpcBuilder("Guide")
-    .position(instance, Pos(0.0, 65.0, 0.0))
-    .nameDisplayMode(NameDisplayMode.PER_PLAYER_HOLOGRAM)
-    .spawn()
+val npc = NpcBuilder().apply {
+  type = EntityType.PLAYER
+  name = "Guide"
+  nameTagVisible = false
+  textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
+  interaction(Vec(0.0, 0.9, 0.0))
+}.spawn(instance, pos)
 
-// On player interact, start a per-player dialogue
 npc.onInteract { player ->
     npc.dialogue(player) {
         line("Hello ${'$'}{player.username}!")
@@ -47,50 +49,28 @@ npc.onInteract { player ->
 ```
 
 Java
-
 ```java
 import codes.bed.minestom.npc.builder.NpcBuilder;
-import codes.bed.minestom.npc.StomNPCs;
-import codes.bed.minestom.npc.api.NameDisplayMode;
-import codes.bed.minestom.npc.types.EntityNpc;
-import net.minestom.server.coordinate.Pos;
-import net.minestom.server.entity.Entity;
-import net.minestom.server.instance.Instance;
+import net.minestom.server.entity.EntityType;
+import net.minestom.server.coordinate.Vec;
+import net.kyori.adventure.text.Component;
 
-/** Minimal Java example wrapped in a class and method. */
-public class NpcExample {
-    public void createNpc(Instance instance) {
-        NpcBuilder builder = new NpcBuilder("Guide");
-        builder.position(instance, new Pos(0.0, 65.0, 0.0));
-        builder.nameDisplayMode(NameDisplayMode.PER_PLAYER_HOLOGRAM);
+// Build and spawn an NPC
+NpcBuilder builder = new NpcBuilder();
+builder.setType(EntityType.PLAYER);
+builder.setName("Guide");
+builder.setNameTagVisible(false);
+builder.textDisplay(Component.text("Guide"), new Vec(0.0, 2.1, 0.0));
+builder.interaction(new Vec(0.0, 0.9, 0.0));
 
-        Entity spawned = builder.spawn();
+var npc = builder.spawn(instance, pos);
 
-        EntityNpc npc = (EntityNpc) StomNPCs.manager().byEntityId(spawned.getUuid());
-
-        npc.onInteract(player -> npc.dialogue(player, d -> {
-            d.line("Hello " + player.getUsername() + "!");
-            d.line("Welcome to the server.");
-        }));
-    }
-}
-
-// Obtain the library helper and cast to the library EntityNpc type
-EntityNpc npc = (EntityNpc) StomNPCs.manager().byEntityId(spawned.getUuid());
-
-// On player interact, start a per-player dialogue
-npc.
-
-onInteract(player ->npc.
-
-dialogue(player, d ->{
-        d.
-
-line("Hello "+player.getUsername() +"!");
-        d.
-
-line("Welcome to the server.");
-}));
+npc.onInteract(player -> {
+    npc.dialogue(player, dialog -> {
+        dialog.line("Hello " + player.getUsername() + "!");
+        dialog.line("Welcome to the server.");
+    });
+});
 ```
 
 License
