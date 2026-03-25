@@ -31,6 +31,9 @@ Kotlin
 import codes.bed.minestom.npc.builder.NpcBuilder
 import codes.bed.minestom.npc.api.NameDisplayMode
 
+// Call this onec when the server starts
+Stomnpc.initialize(eventNode)
+
 val npc = NpcBuilder().apply {
     type = EntityType.PLAYER
     name = "Guide"
@@ -58,6 +61,11 @@ entityNpc.dialogue {
 Java
 
 ```java
+
+// Call this onec when the server starts
+Stomnpc.initialize(eventNode);
+
+
 NpcBuilder builder = new NpcBuilder();
 builder.setType(EntityType.PLAYER);
 builder.setName("Guide");
