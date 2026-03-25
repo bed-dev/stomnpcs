@@ -5,10 +5,13 @@ import codes.bed.minestom.npc.api.NameDisplayMode
 import codes.bed.minestom.npc.api.NpcInteractionType
 import codes.bed.minestom.npc.builder.NpcBuilder
 import codes.bed.minestom.npc.builder.dialogue
+import codes.bed.minestom.npc.builder.treeDialogue
 import codes.bed.minestom.npc.display.InteractionController
 import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
@@ -421,6 +424,43 @@ class TestCommands {
         actor.sendMessage(Component.text("Spawned simple dialogue NPC"))
     }
 
+
+    @Command("npc tree")
+    fun npcDialogueTree(actor: Player) {
+        val instance = actor.instance ?: return
+        val pos = actor.position
+
+        val npc = NpcBuilder().apply {
+            type = EntityType.PLAYER
+            name = "Guide"
+            nameTagVisible = false
+            textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
+            interaction(Vec(0.0, 0.9, 0.0))
+        }.spawn(instance, pos)
+
+        val entityNpc = StomNPCs.manager().byEntityId(npc.uuid) as EntityNpc
+
+        entityNpc.treeDialogue {
+            delay(30)
+            hold(2000)
+
+            // Using simple text (defaults to gray):
+//            prompt("Please respond with a number:")
+
+            // OR using an Adventure Component for full formatting:
+            prompt(Component.text("Make a choice!").color(NamedTextColor.GREEN).decorate(TextDecoration.BOLD))
+
+            root {
+                line("Welcome to the server!")
+                option("Tell me more") {
+                    line("It's a great place.")
+                }
+            }
+        }.attachOnInteract()
+
+        entityNpc.onInteract { }
+        actor.sendMessage(Component.text("Spawned simple dialogue NPC"))
+    }
     @Command("npc follower")
     fun npcFollower(actor: Player) {
         val instance = actor.instance ?: return

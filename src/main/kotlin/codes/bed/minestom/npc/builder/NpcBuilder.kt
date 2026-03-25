@@ -96,6 +96,47 @@ class NpcBuilder {
 
         return npc.entity
     }
+
+    fun setType(type: EntityType): NpcBuilder {
+        this.type = type
+        return this
+    }
+
+    fun setName(name: String): NpcBuilder {
+        this.name = name
+        return this
+    }
+
+    fun setSkin(skin: PlayerSkin?): NpcBuilder {
+        this.skin = skin
+        return this
+    }
+
+    fun setNameTagVisible(visible: Boolean): NpcBuilder {
+        this.nameTagVisible = visible
+        return this
+    }
+
+    fun setTextDisplay(text: Component, offset: Vec = Vec(0.0, 2.15, 0.0)): NpcBuilder {
+        this.textComponent = text
+        this.textOffset = offset
+        return this
+    }
+
+    fun setInteraction(offset: Vec = Vec(0.0, 0.9, 0.0)): NpcBuilder {
+        this.interactionOffset = offset
+        return this
+    }
+
+    fun setOnInteract(handler: (NpcInteraction) -> Unit): NpcBuilder {
+        this.interactHandler = handler
+        return this
+    }
+
+    fun setDialogue(init: DialogueBuilder.() -> Unit): NpcBuilder {
+        this.dialogueInit = init
+        return this
+    }
 }
 
 
@@ -108,7 +149,4 @@ fun spawnNpc(instance: Instance, pos: Pos, init: NpcBuilder.() -> Unit): Entity 
 fun createNpc(init: NpcBuilder.() -> Unit): EntityNpc {
     return NpcBuilder().apply(init).build()
 }
-
-
-
 
