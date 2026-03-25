@@ -86,7 +86,8 @@ dialogue.delay(40L)
         .message("Enjoy your stay!");
 
 // 4. Attach the listener so it triggers when players click the NPC
-dialogue.attachOnInteract();```
+dialogue.attachOnInteract();
+```
 
 License
 -------
