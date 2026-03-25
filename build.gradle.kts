@@ -30,10 +30,10 @@ kotlin {
 
 // The new unified publishing block
 mavenPublishing {
-    coordinates(project.group.toString(), "stomnpcs", project.version.toString())
+    coordinates(project.group.toString(), "npc", project.version.toString())
 
     pom {
-        name.set("stomnpcs")
+        name.set("npc")
         description.set(project.description)
         inceptionYear.set("2024")
         url.set("https://github.com/bed-dev/stomnpcs")
