@@ -31,31 +31,33 @@ Kotlin
 import codes.bed.minestom.npc.builder.NpcBuilder
 import codes.bed.minestom.npc.api.NameDisplayMode
 
-// Build and spawn an NPC
 val npc = NpcBuilder().apply {
-  type = EntityType.PLAYER
-  name = "Guide"
-  nameTagVisible = false
-  textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
-  interaction(Vec(0.0, 0.9, 0.0))
+    type = EntityType.PLAYER
+    name = "Guide"
+    nameTagVisible = false
+    textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
+    interaction(Vec(0.0, 0.9, 0.0))
 }.spawn(instance, pos)
 
-npc.onInteract { player ->
-    npc.dialogue(player) {
-        line("Hello ${'$'}{player.username}!")
-        line("Welcome to the server.")
-    }
+val entityNpc = StomNPCs.manager().byEntityId(npc.uuid) as EntityNpc
+
+entityNpc.dialogue {
+    message("Hello Player")
+    message("Welcome to the server.")
+    message("I have a lot to tell you.")
+    message("But let's start with the basics.")
+    delay(40)
+    hold(2500)
+    offset(Vec(0.0, 2.1, 0.0))
 }
+    .attachOnInteract()
+
 ```
 
-Java
-```java
-import codes.bed.minestom.npc.builder.NpcBuilder;
-import net.minestom.server.entity.EntityType;
-import net.minestom.server.coordinate.Vec;
-import net.kyori.adventure.text.Component;
 
-// Build and spawn an NPC
+Java
+
+```java
 NpcBuilder builder = new NpcBuilder();
 builder.setType(EntityType.PLAYER);
 builder.setName("Guide");
@@ -65,13 +67,18 @@ builder.interaction(new Vec(0.0, 0.9, 0.0));
 
 var npc = builder.spawn(instance, pos);
 
-npc.onInteract(player -> {
-    npc.dialogue(player, dialog -> {
-        dialog.line("Hello " + player.getUsername() + "!");
-        dialog.line("Welcome to the server.");
-    });
-});
-```
+// 2. Create the simple, linear dialogue
+DialogueBuilder dialogue = new DialogueBuilder(npc);
+    
+// 3. Chain your configuration and messages
+dialogue.delay(40L)
+        .hold(2500L)
+        .message("Hello traveler!")
+        .message("Welcome to the server.")
+        .message("Enjoy your stay!");
+
+// 4. Attach the listener so it triggers when players click the NPC
+dialogue.attachOnInteract();```
 
 License
 -------
