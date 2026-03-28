@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "codes.bed.minestom"
-version = "0.1.2"
+version = "0.1.3"
 description = "A small Minestom NPC library providing per-player dialogue holograms and configurable name displays"
 
 repositories {

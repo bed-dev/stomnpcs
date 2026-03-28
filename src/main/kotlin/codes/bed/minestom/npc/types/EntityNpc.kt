@@ -5,9 +5,9 @@ import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.*
 import net.minestom.server.entity.metadata.avatar.PlayerMeta
-import net.minestom.server.network.packet.server.play.PlayerInfoRemovePacket
-import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket
-import net.minestom.server.network.packet.server.play.TeamsPacket
+import net.minestom.server.network.packet.server.play.*
+import net.minestom.server.timer.Task
+import net.minestom.server.timer.TaskSchedule
 import java.util.*
 
 @Suppress("UnstableApiUsage")
@@ -23,6 +23,10 @@ open class EntityNpc @JvmOverloads constructor(
     private val team = MinecraftServer.getTeamManager().createBuilder("hidden_tag")
         .nameTagVisibility(TeamsPacket.NameTagVisibility.NEVER)
         .build()
+
+    private var lookAtNearestPlayerEnabled: Boolean = false
+    private var lookAtNearestPlayerDistance: Double = 8.0
+    private var lookTask: Task? = null
 
     init {
         setNoGravity(false)
@@ -103,6 +107,50 @@ open class EntityNpc @JvmOverloads constructor(
         if (npcType == EntityType.PLAYER) {
             player.sendPacket(PlayerInfoRemovePacket(uuid))
         }
+    }
+
+    /**
+     * Enable or disable the look-at-nearest-player behavior for this NPC.
+     * @param enabled Whether to enable the behavior.
+     * @param distance The max distance to look for players.
+     */
+    fun setLookAtNearestPlayer(enabled: Boolean, distance: Double = 8.0) {
+        lookTask?.cancel()
+        lookAtNearestPlayerEnabled = enabled
+        lookAtNearestPlayerDistance = distance
+        
+        if (enabled) {
+            lookTask = MinecraftServer.getSchedulerManager().buildTask {
+                val instance = this@EntityNpc.entity.instance ?: return@buildTask
+                val npcPos = this@EntityNpc.entity.position
+                val players = instance.players
+                val closest = players
+                    .filter { it.position.distance(npcPos) <= lookAtNearestPlayerDistance }
+                    .minByOrNull { it.position.distance(npcPos) }
+                if (closest != null) {
+                    val lookPos = npcPos.withLookAt(closest.position)
+                    val yaw = lookPos.yaw()
+                    val pitch = lookPos.pitch()
+                    for (player in players) {
+                        player.sendPackets(
+                            EntityHeadLookPacket(this@EntityNpc.entity.entityId, yaw),
+                            EntityRotationPacket(
+                                this@EntityNpc.entity.entityId,
+                                yaw,
+                                pitch,
+                                this@EntityNpc.entity.isOnGround
+                            )
+                        )
+                    }
+                }
+            }.repeat(TaskSchedule.nextTick()).schedule()
+        }
+    }
+
+    override fun remove() {
+        lookTask?.cancel()
+        lookTask = null
+        super.remove()
     }
 
     companion object {

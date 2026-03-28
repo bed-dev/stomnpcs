@@ -406,9 +406,11 @@ class TestCommands {
             nameTagVisible = false
             textDisplay(Component.text("Guide"), Vec(0.0, 2.1, 0.0))
             interaction(Vec(0.0, 0.9, 0.0))
+            setLookAtNearestPlayer(true, 5.0)
         }.spawn(instance, pos)
 
         val entityNpc = StomNPCs.manager().byEntityId(npc.uuid) as EntityNpc
+
 
         entityNpc.dialogue {
             message("Hello Player")
