@@ -13,7 +13,7 @@ Lightweight NPC utilities for Minestom servers. This library provides configurab
 **Gradle (Kotlin DSL)**
 
 ```kotlin
-implementation("codes.bed.minestom:stomnpcs:0.1.1")
+implementation("codes.bed.minestom:npc:0.1.2")
 ```
 
 **Maven**
@@ -21,8 +21,8 @@ implementation("codes.bed.minestom:stomnpcs:0.1.1")
 ```xml
 <dependency>
     <groupId>codes.bed.minestom</groupId>
-    <artifactId>stomnpcs</artifactId>
-    <version>0.1.1</version>
+    <artifactId>npc</artifactId>
+    <version>0.1.2</version>
 </dependency>
 ```
 

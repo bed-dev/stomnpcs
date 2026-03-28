@@ -79,9 +79,22 @@ open class EntityNpc @JvmOverloads constructor(
                 true
             )
 
-            player.sendPacket(PlayerInfoUpdatePacket(PlayerInfoUpdatePacket.Action.ADD_PLAYER, entry))
+            player.sendPacket(
+                PlayerInfoUpdatePacket(
+                    EnumSet.of(
+                        PlayerInfoUpdatePacket.Action.ADD_PLAYER,
+                        PlayerInfoUpdatePacket.Action.UPDATE_LISTED
+                    ), listOf(entry)
+                )
+            )
+
         }
         super.updateNewViewer(player)
+
+        // ensure player is not in reporting menu
+        if (npcType == EntityType.PLAYER) {
+            player.sendPacket(PlayerInfoRemovePacket(uuid))
+        }
     }
 
     override fun updateOldViewer(player: Player) {

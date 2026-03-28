@@ -5,6 +5,7 @@ import codes.bed.minestom.npc.display.TextDisplayController
 import codes.bed.minestom.npc.listener.NpcInteractListener
 import codes.bed.minestom.npc.types.EntityNpc
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.TextComponent
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.metadata.display.AbstractDisplayMeta
@@ -48,6 +49,7 @@ class DialogueBuilder(private val npc: EntityNpc) {
 
             val dialogue = TextDisplayController(Component.empty(), baseOffset)
             dialogue.attachTo(npc.entity, instance)
+
             // Ensure centered billboard rendering if supported
             dialogue.getEntity()?.editEntityMeta(TextDisplayMeta::class.java) { meta ->
                 meta.billboardRenderConstraints = AbstractDisplayMeta.BillboardConstraints.CENTER
@@ -101,7 +103,7 @@ class DialogueBuilder(private val npc: EntityNpc) {
                     return@buildTask
                 }
 
-                val current = messages[index]
+                val current = messages[index] as TextComponent
                 val now = System.currentTimeMillis()
 
                 // Ensure the dialogue display follows any runtime changes to the NPC's name offset
@@ -112,13 +114,13 @@ class DialogueBuilder(private val npc: EntityNpc) {
 
                 if (typing) {
                     if (now >= nextTickAt) {
-                        while (charIdx < current.toString().length && now >= nextTickAt) {
+                        while (charIdx < current.content().length && now >= nextTickAt) {
                             charIdx++
                             nextTickAt += delayMillis
                         }
-                        if (charIdx > current.toString().length) charIdx = current.toString().length
-                        dialogue.updateText(Component.text(current.toString().substring(0, charIdx)))
-                        if (charIdx >= current.toString().length) {
+                        if (charIdx > current.content().length) charIdx = current.content().length
+                        dialogue.updateText(Component.text(current.content().substring(0, charIdx)))
+                        if (charIdx >= current.content().length) {
                             typing = false
                             holdUntil = now + holdDurationMillis
                         }
